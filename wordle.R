@@ -173,4 +173,4 @@ clear<-function(width, height) {
 ###########
 ###########
 ##########
-wordle(3)
+wordle()
