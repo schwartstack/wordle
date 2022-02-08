@@ -73,7 +73,7 @@ pick_quordle_words <- function(url = "https://raw.githubusercontent.com/schwarts
   }
   return(words)
 }
-setup_quordle_dictionary <- function(url = "https://raw.githubusercontent.com/schwartstack/wordle/main/mit.10000.words.txt"){
+setup_quordle_dictionary <- function(url = "https://raw.githubusercontent.com/schwartstack/wordle/main/words.txt"){
   words = read.table(url, as.is = T) %>%
     filter(!grepl("'", V1, fixed = T)) %>%
     pull(V1) %>%

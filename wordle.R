@@ -62,6 +62,14 @@ wordle <- function(word = NULL, n = ifelse(is.null(word), N, nchar(word)), sleep
     n = nchar(word)
   }
   
+  words2 = read.table("https://raw.githubusercontent.com/schwartstack/wordle/main/words.txt", as.is = T) %>%
+    filter(nchar(V1) == n) %>%
+    filter(!grepl("'", V1, fixed = T)) %>%
+    pull(V1) %>%
+    toupper
+  words = unique(c(words, words2))
+  
+  
   w = width/10
   h = height/16
   KEYBOARD = data.frame(letter = c("Q","W","E","R","T","Y","U","I","O","P",
@@ -173,4 +181,4 @@ clear<-function(width, height) {
 ###########
 ###########
 ##########
-wordle(3)
+wordle(5)
