@@ -1,27 +1,30 @@
 library(dplyr)
 ######################################
-WIDTH = 27
-N_GUESSES = 8
+MIN_WORD = 4
+WIDTH = (MIN_WORD+3)*4+3
+N_GUESSES = 9
 HEIGHT = N_GUESSES + 2
 COLORS = c("grey", "gold1", "forestgreen")
 
 quordle <- function(){
-  require(beepr)
   user_mar = par()$mar
   par(mar = c(1,1,1,1))
   
-  points = setup_quordle_points()
-  dictionary = setup_quordle_dictionary()
-  keyboard = setup_quordle_keyboard()
-  word = pick_quordle_words()
+  points = setup_quordle_points(MIN_WORD)
+  dictionary = setup_quordle_dictionary(MIN_WORD)
+  keyboard = setup_quordle_keyboard(MIN_WORD)
+  word = pick_quordle_words(MIN_WORD)
   active = rep(T,4)
-  clear_quordle()
-  plot_quordle_keyboard(keyboard, active)
+  clear_quordle(width = WIDTH, height = HEIGHT)
+  plot_quordle_keyboard(keyboard, active, MIN_WORD)
+  
+  print(word)
   
   guess_count = 0
-  while(guess_count < N_GUESSES) {
+  win = F
+  while(guess_count < N_GUESSES & !win) {
     guess = readline(prompt="Enter guess: ")
-    if(!(nchar(guess) %in% (3:6)[active])){
+    if(!(nchar(guess) %in% (MIN_WORD:(MIN_WORD+3))[active])){
       print(paste("Invalid word length."))
     }else{
       if(!(toupper(guess) %in% unlist(dictionary))){
@@ -31,20 +34,19 @@ quordle <- function(){
         
         clue = compare_quordle_guess(guess, word, active)
         points = calculate_quordle_points(points, clue, active)
-        keyboard = update_quordle_keyboard(keyboard, clue, guess, active)
-        plot_quordle_guess(toupper(guess), guess_count, clue, 0, active)
-        plot_quordle_keyboard(keyboard, active)
+        keyboard = update_quordle_keyboard(keyboard, clue, guess, active, MIN_WORD)
+        plot_quordle_guess(toupper(guess), guess_count, clue, 0, active, MIN_WORD)
+        plot_quordle_keyboard(keyboard, active, MIN_WORD)
         
         for(i in 1:4){
           if(active[i]){
             if(all(clue[[i]] == COLORS[3])){
-              beep(5)
               active[i] = F
               print("Nice!")
               if(all(!active)){
                 par(mar = user_mar)
-                beep(3)
                 print("You win!!!")
+                win = T
                 break
               }
             }
@@ -52,7 +54,6 @@ quordle <- function(){
         }
         if(guess_count == N_GUESSES){
           par(mar = user_mar)
-          beep(9)
           print("Game over.")
           print("The words were:")
           print(word)
@@ -60,32 +61,35 @@ quordle <- function(){
       }
     }
   }
-  print(paste("Your score was ", calculate_quordle_final_score(points, active), "/100", sep = ""))
+  score = calculate_quordle_final_score(points, active, MIN_WORD)
+  max_score = calculate_quordle_max_score(MIN_WORD)
+  score_percent = round(score/max_score, 2)*100
+  print(paste("Your score was ", score, "/", max_score, " (", score_percent, "%)", sep = ""))
 }
 
 
 
-pick_quordle_words <- function(url = "https://raw.githubusercontent.com/schwartstack/wordle/main/english-common-words.txt") {
+pick_quordle_words <- function(min_word, url = "https://raw.githubusercontent.com/schwartstack/wordle/main/english-common-words.txt") {
   words = c()
-  dictionary = setup_quordle_dictionary(url)
+  dictionary = setup_quordle_dictionary(min_word, url)
   for(i in 1:4){
     words[i] = sample(dictionary[[i]], 1)
   }
   return(words)
 }
-setup_quordle_dictionary <- function(url = "https://raw.githubusercontent.com/schwartstack/wordle/main/words.txt"){
+setup_quordle_dictionary <- function(min_word, url = "https://raw.githubusercontent.com/schwartstack/wordle/main/words.txt"){
   words = read.table(url, as.is = T) %>%
     filter(!grepl("'", V1, fixed = T)) %>%
     pull(V1) %>%
     toupper
   dictionary = list()
   for(i in 1:4){
-    dictionary[[i]] = words[nchar(words) == i+2]
+    dictionary[[i]] = words[nchar(words) == i+min_word-1]
   }
   return(dictionary)
 }
-setup_quordle_keyboard <- function(){
-  W = 6/10
+setup_quordle_keyboard <- function(min_word){
+  W = (min_word+3)/10
   H = 1/2
   keyboard = list()
   for(i in 1:4){
@@ -95,9 +99,9 @@ setup_quordle_keyboard <- function(){
                                row = c(rep(1,10),
                                        rep(2,9),
                                        rep(3,7)),
-                               x = c(seq(7*(i-1), 7*(i-1)+6-W, by = W),
-                                     seq(7*(i-1)+W/2, 7*(i-1)+W/2+6-1.5*W, by = W),
-                                     seq(7*(i-1)+W, 7*(i-1)+7*W, by = W)), 
+                               x = c(seq((min_word+4)*(i-1), (min_word+4)*(i-1)+(min_word+3)-W, by = W),
+                                     seq((min_word+4)*(i-1)+W/2, (min_word+4)*(i-1)+W/2+(min_word+3)-1.5*W, by = W),
+                                     seq((min_word+4)*(i-1)+W, (min_word+4)*(i-1)+7*W, by = W)), 
                                y = c(rep(1, 10),
                                      rep(1/2, 9),
                                      rep(0, 7)),
@@ -112,10 +116,10 @@ setup_quordle_words <- function(dictionary) {
   }
   return(word)
 }
-setup_quordle_points <- function() {
+setup_quordle_points <- function(min_word) {
   points = list()
   for(i in 1:4){
-    points[[i]] = rep(0, i+2)
+    points[[i]] = rep(0, i+min_word-1)
   }
   return(points)
 }
@@ -123,11 +127,6 @@ setup_quordle_points <- function() {
 compare_quordle_guess <- function(guess, answers, active){
   result = list()
   guess_letters = strsplit(guess,"")[[1]] %>% toupper()
-  # if(length(guess_letters) < 6){
-  #   for(i in (length(guess_letters)+1):6){
-  #     guess_letters[i] = " "
-  #   }
-  # }
   for(i in 1:4){
     if(active[i]){
       answer = answers[i]
@@ -177,23 +176,26 @@ calculate_quordle_points <- function(points, clue, active) {
   }
   return(temp)
 }
-calculate_quordle_final_score <- function(points, active){
-  return(sum(unlist(points)) + sum(!active)*7)
+calculate_quordle_final_score <- function(points, active, min_word){
+  return(sum(unlist(points)) + sum((!active)*(min_word:(min_word+3))))
 }
-plot_quordle_guess <- function(guess, guess_num, clue, sleep, active) {
+calculate_quordle_max_score <- function(min_word){
+  return(sum(min_word:(min_word+3))*4)
+}
+plot_quordle_guess <- function(guess, guess_num, clue, sleep, active, min_word) {
   W = 1
   H = 1
   guess_letters = strsplit(guess, "")[[1]]
   adjustment = c(1.5, 1, .5, 0)
   for(i in 1:4){
     if(active[i]){
-      xstart = 7*(i-1)+adjustment[i]
-      xstop = 7*(i-1)+6+adjustment[i]
+      xstart = (min_word+4)*(i-1)+adjustment[i]
+      xstop = (min_word+4)*(i-1)+(min_word+3)+adjustment[i]
       ystart = HEIGHT-guess_num
       ystop = HEIGHT-guess_num+1
-      for(j in 1:(i+2)){
+      for(j in 1:(i+min_word-1)){
         rect(xstart+(j-1)*W, ystart, xstart+j*W, ystart+H, col = clue[[i]][j])
-        if(j <= (i+2)){
+        if(j <= (i+min_word-1)){
           text(xstart+(j-1)*W+W/2, ystart+H/2, guess_letters[j], cex = 1)
         }
         Sys.sleep(sleep)
@@ -201,25 +203,33 @@ plot_quordle_guess <- function(guess, guess_num, clue, sleep, active) {
     }
   }
 }
-update_quordle_keyboard <- function(keyboard, clue, guess, active){
+update_quordle_keyboard <- function(keyboard, clue, guess, active, min_word){
   temp = keyboard
   guess_letters = strsplit(toupper(guess), "")[[1]]
   for(i in 1:4){
     if(active[i]){
-      for(j in 1:min(length(guess_letters), i+2)){
-        if(temp[[i]]$color[which(temp[[i]]$letter == guess_letters[j])] != COLORS[3]){
+      for(j in 1:min(length(guess_letters), i+min_word-1)){
+        if(clue[[i]][j] == COLORS[3]){#clue is green, overwrites anything
           temp[[i]]$color[which(temp[[i]]$letter == guess_letters[j])] = clue[[i]][j]
+        }else if(clue[[i]][j] == COLORS[2]){#clue is yellow, overwrites grey and white
+          if(temp[[i]]$color[which(temp[[i]]$letter == guess_letters[j])] != COLORS[3]){
+            temp[[i]]$color[which(temp[[i]]$letter == guess_letters[j])] = clue[[i]][j]
+          }
+        }else if(clue[[i]][j] == COLORS[1]){#clue is grey, only overwrites white
+          if(temp[[i]]$color[which(temp[[i]]$letter == guess_letters[j])] == "white"){
+            temp[[i]]$color[which(temp[[i]]$letter == guess_letters[j])] = clue[[i]][j]
+          }
         }
       }
     }
   }
   return(temp)
 }
-clear_quordle <- function(){
-  plot(NULL, xlim = c(0, WIDTH), ylim = c(0, HEIGHT), xaxt = "n", yaxt = "n", bty = "n")
+clear_quordle <- function(width, height){
+  plot(NULL, xlim = c(0, width), ylim = c(0, height), xaxt = "n", yaxt = "n", bty = "n")
 }
-plot_quordle_keyboard <- function(keyboard, active){
-  W = 6/10
+plot_quordle_keyboard <- function(keyboard, active, min_word){
+  W = (min_word+3)/10
   H = 1/2
   for(i in 1:4){
     if(active[i]){
