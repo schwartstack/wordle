@@ -18,8 +18,6 @@ quordle <- function(){
   clear_quordle(width = WIDTH, height = HEIGHT)
   plot_quordle_keyboard(keyboard, active, MIN_WORD)
   
-  print(word)
-  
   guess_count = 0
   win = F
   while(guess_count < N_GUESSES & !win) {
@@ -54,9 +52,11 @@ quordle <- function(){
         }
         if(guess_count == N_GUESSES){
           par(mar = user_mar)
-          print("Game over.")
-          print("The words were:")
-          print(word)
+          if(!win){
+            print("Game over.")
+            print("The words were:")
+            print(word)
+          }
         }
       }
     }
