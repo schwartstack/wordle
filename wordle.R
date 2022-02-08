@@ -49,7 +49,7 @@ wordle <- function(word = NULL, n = ifelse(is.null(word), N, nchar(word)), sleep
     word = NULL
   }
   
-  words = read.table("https://raw.githubusercontent.com/schwartstack/wordle/main/words2.txt", as.is = T) %>%
+  words = read.table("https://raw.githubusercontent.com/schwartstack/wordle/main/english-common-words.txt", as.is = T) %>%
     filter(nchar(V1) == n) %>%
     filter(!grepl("'", V1, fixed = T)) %>%
     pull(V1) %>%
@@ -173,4 +173,4 @@ clear<-function(width, height) {
 ###########
 ###########
 ##########
-wordle()
+wordle(3)
