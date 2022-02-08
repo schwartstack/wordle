@@ -1,19 +1,8 @@
-10th
-1st
-2nd
-3rd
-4th
-5th
-6th
-7th
-8th
-9th
 a
 AAA
 AAAs
 aardvark
 aardvarks
-aardvark's
 Aarhus
 Aaron
 ABA
@@ -23,7 +12,6 @@ abacus
 abaft
 abalone
 abalones
-abalone's
 abandon
 abandoned
 abandoner
